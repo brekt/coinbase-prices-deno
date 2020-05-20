@@ -1,5 +1,5 @@
 export interface Price {
-    symbol: string;
+    coin: string;
     usd: number;
 }
 
@@ -21,4 +21,13 @@ export interface Asset {
     volume_1day_usd: number;
     volume_1mth_usd: number;
     id_icon: string;
+}
+
+export interface Period {
+    period_id: string;
+    length_seconds: number;
+    length_months: number;
+    unit_count: number;
+    unit_name: string;
+    display_name: string;
 }
