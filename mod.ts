@@ -1,5 +1,5 @@
 // @ts-ignore
-import { readFileStrSync } from 'https://deno.land/std/fs/mod.ts';
+import { readFileStrSync } from 'https://deno.land/std@0.53.0/fs/mod.ts';
 // @ts-ignore
 import { Asset, Period, Price } from './types.ts';
 
@@ -7,12 +7,12 @@ const apiRoot = 'https://rest.coinapi.io/v1';
 
 const myCoins: string[] = [
     'BTC',
-    'ETH',
-    'BAT',
-    'LINK',
-    'GNT',
-    'CVC',
-    'OMG'
+    // 'ETH',
+    // 'BAT',
+    // 'LINK',
+    // 'GNT',
+    // 'CVC',
+    // 'OMG'
 ];
 
 /**
@@ -28,6 +28,23 @@ const fetchOptions = {
         'X-CoinAPI-Key': apiKey
     }
 };
+
+
+function getTodayISO() {
+	const today = new Date();
+	today.setMinutes(today.getMinutes() - 2);
+
+    return today.toISOString();
+}
+
+function getYesterdayISO() {
+	const today = new Date();
+	const yesterday = new Date(today);
+
+	yesterday.setDate(yesterday.getDate() - 1);
+
+	return yesterday.toISOString();
+}
 
 
 const getExchanges = async(): Promise<object | null> => {
@@ -81,28 +98,17 @@ const getPeriods = async (): Promise<Array<Period>> => {
     return periods;
 };
 
-const getPriceChange = async (coin: string, base = 'USD', period: string) : Promise<Price> => {
-/**
-{
-    time_period_start: "2020-05-20T00:00:00.0000000Z",
-    time_period_end: "2020-05-21T00:00:00.0000000Z",
-    time_open: "2020-05-20T00:00:00.1362160Z",
-    time_close: "2020-05-20T01:08:31.9131170Z",
-    price_open: 9783.57,
-    price_high: 9809.25,
-    price_low: 9733,
-    price_close: 9766.61,
-    volume_traded: 1673.942753817,
-    trades_count: 7996
-}
- */
+const get24HourChange = async (coin: string) : Promise<Price> => {
     try {
-        const response = await(await fetch(`${apiRoot}/ohlcv/${coin}/${base}/latest?period_id=${period}&limit=1`, fetchOptions)).json();
-        const data = response[0];
+        const yResponse = await(await fetch(`${apiRoot}/ohlcv/${coin}/USD/history?period_id=1MIN&time_start=${getYesterdayISO()}&limit=1`, fetchOptions)).json();
+        const yData = yResponse[0];
+        const tResponse = await(await fetch(`${apiRoot}/ohlcv/${coin}/USD/history?period_id=1MIN&time_start=${getTodayISO()}&limit=1`, fetchOptions)).json();
+        const tData = tResponse[0];
+	   
+        console.log('yesterday data:', yResponse, 'today data:', tResponse);
 
-        console.log(data);
-        const priceChange = data.price_close - data.price_open;
-    
+	    const priceChange = tData.price_close - yData.price_close;
+        
         return {
             coin,
             usd: priceChange
@@ -116,7 +122,7 @@ const getPriceChange = async (coin: string, base = 'USD', period: string) : Prom
 
 const getMyPriceChanges = async () : Promise<Price[]> => {
     try {
-        const promises = myCoins.map(coin => getPriceChange(coin, 'USD', '1DAY'));
+        const promises = myCoins.map(coin => get24HourChange(coin));
         const changes = await Promise.all(promises);
     
         return changes;
@@ -130,21 +136,17 @@ const getMyPriceChanges = async () : Promise<Price[]> => {
 (async () => {
     const priceChanges = await getMyPriceChanges();
 
+
     console.log(priceChanges);
 })();
 
-// (async () => {
+(async () => {
 
-//     const assets = await getMyAssets();
+     const assets = await getMyAssets();
 
-//     const prices = getPrices(assets);
+     const prices = await getPrices(assets);
 
-//     console.log(prices);
+     console.log(prices);
 
-// })();
+ })();
 
-// (async () => {
-//     const periods = await getPeriods();
-
-//     console.log(periods);
-// })();
